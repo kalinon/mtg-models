@@ -6,7 +6,7 @@ authors:
 
 targets:
   mtg-models:
-    main: src/mtg-models.cr
+    main: src/bin/cli.cr
 
 crystal: 1.7.2
 
@@ -16,6 +16,9 @@ dependencies:
   spoved:
     github: spoved/spoved.cr
     version: "~> 0.8.0"
+  commander:
+    github: mrrooijen/commander
+    version: ~> 0.3.5
 
   cadmium_tokenizer:
     github: cadmiumcr/tokenizer

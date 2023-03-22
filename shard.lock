@@ -4,6 +4,10 @@ shards:
     git: https://github.com/cadmiumcr/tokenizer.git
     version: 0.1.0+git.commit.e7f8733e4d8ead9a811b6f41d0b5fa621ba03033
 
+  commander:
+    git: https://github.com/mrrooijen/commander.git
+    version: 0.3.5
+
   db:
     git: https://github.com/crystal-lang/crystal-db.git
     version: 0.11.0
