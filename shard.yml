@@ -1,0 +1,30 @@
+name: mtg-models
+version: 0.1.0
+
+authors:
+  - Holden Omans <holden.omans@gmail.com>
+
+targets:
+  mtg-models:
+    main: src/mtg-models.cr
+
+crystal: 1.7.2
+
+license: MIT
+
+dependencies:
+  spoved:
+    github: spoved/spoved.cr
+    version: "~> 0.8.0"
+
+  cadmium_tokenizer:
+    github: cadmiumcr/tokenizer
+
+  # Apis
+  scryfall:
+    github: kalinon/scryfall.cr
+    version: ~> 0.3.7
+  tcg-player:
+    github: spoved/tcg-player.cr
+  moxfield:
+    github: spoved/moxfield.cr

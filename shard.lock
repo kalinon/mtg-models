@@ -1,0 +1,34 @@
+version: 2.0
+shards:
+  cadmium_tokenizer:
+    git: https://github.com/cadmiumcr/tokenizer.git
+    version: 0.1.0+git.commit.e7f8733e4d8ead9a811b6f41d0b5fa621ba03033
+
+  db:
+    git: https://github.com/crystal-lang/crystal-db.git
+    version: 0.11.0
+
+  halite:
+    git: https://github.com/icyleaf/halite.git
+    version: 0.12.1
+
+  moxfield:
+    git: https://github.com/spoved/moxfield.cr.git
+    version: 0.1.0
+
+  mtg:
+    git: https://github.com/spoved/mtg.cr.git
+    version: 0.2.9
+
+  scryfall:
+    git: https://github.com/kalinon/scryfall.cr.git
+    version: 0.3.7
+
+  spoved:
+    git: https://github.com/spoved/spoved.cr.git
+    version: 0.8.6
+
+  tcg-player:
+    git: https://github.com/spoved/tcg-player.cr.git
+    version: 0.1.0+git.commit.947d4bdb0f20e37415d5eb7585c19be66a8238f2
+
