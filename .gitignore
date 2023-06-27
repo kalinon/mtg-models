@@ -7,5 +7,5 @@ tmp
 .env
 .ipynb_checkpoints
 __pycache__
+!/data/.keep
 /data/
-!data/.keep
