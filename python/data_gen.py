@@ -1,8 +1,6 @@
 # Download Data
 import json
-
 import numpy as np
-
 import func
 
 
