@@ -178,7 +178,7 @@ def preprocess(load_data_path: str, preprocess_data_path: str):
 # download_data()
 # fetch_cards()
 # load_data('.', './tmp/output')
-preprocess('./tmp/output', './tmp/pre')
+# preprocess('./tmp/output', './tmp/pre')
 
 # preprocess_dfc('./tmp/output', './tmp/pre')
 # preprocess_data('./tmp/output', './tmp/pre')
