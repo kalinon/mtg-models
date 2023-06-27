@@ -1,7 +1,6 @@
-kfp==1.8.22
 nltk~=3.8.1
 pandas~=1.5.3
-numpy~=1.25.0
+numpy~=1.24.2
 keras~=2.12.0
 tensorflow==2.11.1
 streamlit_player

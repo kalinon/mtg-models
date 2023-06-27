@@ -5,7 +5,7 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import TweetTokenizer
 import numpy as np
 from pandas import DataFrame
-import checks
+import python.checks
 
 
 def flatten_array(data: DataFrame, key: str, prefix=None, drop=False):

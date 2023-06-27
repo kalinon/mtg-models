@@ -1,15 +1,15 @@
 # Download Data
 import json
 import numpy as np
-import func
+import python.func
 
 
-def download_data():
+def download_data(data_dir: str = "./data"):
     import requests
     import json
 
     bulk_data_endpoint = 'https://api.scryfall.com/bulk-data'
-    oracle_cards_file = 'oracle_cards.json'
+    oracle_cards_file = data_dir + '/oracle_cards.json'
 
     response = requests.get(bulk_data_endpoint)
     if response.status_code == 200:
@@ -33,12 +33,14 @@ def download_data():
         print(f"Error: {response.status_code}")
 
 
-def fetch_cards():
+def fetch_cards(data_dir: str = "./data"):
     import pandas as pd
     import json
     import requests
+    oracle_cards_file = data_dir + '/oracle_cards.json'
+    cards_data_file = data_dir + '/cards.json'
 
-    with open('./oracle_cards.json', 'rt', encoding='utf-8') as f:
+    with open(oracle_cards_file, 'rt', encoding='utf-8') as f:
         json_data = json.load(f)
 
     cards = []
@@ -51,7 +53,7 @@ def fetch_cards():
         if card['name'] == 'Smelt // Herd // Saw':
             continue
 
-        print(card["id"] + " - " + card["name"])
+        # print(card["id"] + " - " + card["name"])
         response = requests.get(
             "http://192.168.7.23:32079/api/v1/scryfall_card/" + card["id"])
         # response = requests.get("http://mtg-helper-api-ro.mtg-helper/api/v1/scryfall_card/" + card["id"])
@@ -61,11 +63,11 @@ def fetch_cards():
 
     print(f'total cards: {len(cards)}')
 
-    with open(f'./cards.json', 'w') as f:
+    with open(cards_data_file, 'w') as f:
         json.dump(cards, f)
 
 
-def preprocess(load_data_path: str, preprocess_data_path: str):
+def preprocess_data(load_data_path: str = './data'):
     import pandas as pd
     import pickle
 
@@ -98,7 +100,7 @@ def preprocess(load_data_path: str, preprocess_data_path: str):
     ]
 
     # loading the train data
-    with open('./cards.json', 'rt', encoding='utf-8') as f:
+    with open(f'{load_data_path}/cards.json', 'rt', encoding='utf-8') as f:
         json_data = json.load(f)
 
     set_df = pd.json_normalize(json_data)
@@ -166,14 +168,13 @@ def preprocess(load_data_path: str, preprocess_data_path: str):
     ])
 
     print(f"Final shape of dataframe: {set_df.shape}")
-    with open('./cards.csv', 'wt', encoding='utf-8') as f:
+    with open(f'{load_data_path}/cards.csv', 'wt', encoding='utf-8') as f:
         set_df.to_csv(f)
 
+    with open(f'{load_data_path}/df', 'wb') as f:
+        pickle.dump(set_df, f)
 
-#     with open(f'{load_data_path}/df', 'wb') as f:
-#         pickle.dump(set_df, f)
-#
-#     return (print('Done!'))
+    return (print('Done!'))
 
 # download_data()
 # fetch_cards()
