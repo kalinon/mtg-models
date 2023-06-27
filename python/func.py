@@ -5,7 +5,7 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import TweetTokenizer
 import numpy as np
 from pandas import DataFrame
-import python.checks
+import python.checks as checks
 
 
 def flatten_array(data: DataFrame, key: str, prefix=None, drop=False):
@@ -24,31 +24,6 @@ def flatten_array(data: DataFrame, key: str, prefix=None, drop=False):
     if drop:
         tmp = tmp.drop(columns=key)
     return tmp
-
-
-def flatten_array2(data: DataFrame, key: str, prefix=None, drop=False):
-    print(f'Flattening {key}...')
-
-    # "Explode" the lists into separate rows
-    df_dummies = data[['name', key]].explode(key)
-    print(f"Shape of dataframe: {df_dummies.shape}")
-
-    # Drop the array column
-    df_dummies.drop(columns=[key], inplace=True)
-    print(f"Shape of dataframe: {df_dummies.shape}")
-
-    if prefix is None:
-        prefix = key
-
-    # Prefix column names to differentiate them, but skip the name column
-    df_dummies = df_dummies.rename(columns={col: f'{prefix}.' + col for col in data.columns if col != 'name'})
-    print(f"Shape of dataframe: {df_dummies.shape}")
-
-    # Join back with the original DataFrame
-    data = data.merge(df_dummies, on='name')
-    if drop:
-        data.drop(columns=key, inplace=True)
-    return data
 
 
 def drop_columns(data, cols):

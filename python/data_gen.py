@@ -1,7 +1,7 @@
 # Download Data
 import json
 import numpy as np
-import python.func
+import python.func as func
 
 
 def download_data(data_dir: str = "./data"):
