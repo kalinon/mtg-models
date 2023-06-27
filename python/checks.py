@@ -51,7 +51,7 @@ def check_counterspell(row):
 
 
 def check_mana_rock(row):
-    if row['tapping_ability'] == 1 or "tap" in row['oracle_text'].lower():
+    if row['meta.tapping_ability'] == 1 or "tap" in row['oracle_text'].lower():
         if "artifact" in row['all_types']:
             return check_any(row['oracle_text'], [
                 (r"{t}: add.*?(mana of any color|mana of that color|{(.*?)})", True),
@@ -62,7 +62,7 @@ def check_mana_rock(row):
 
 
 def check_mana_dork(row):
-    if row['tapping_ability'] == 1 and row['mana_rock'] is False:
+    if row['meta.tapping_ability'] == 1 and row['meta.mana_rock'] is False:
         if "land" not in row['all_types'] and "creature" in row['all_types']:
             return check_any(row['oracle_text'], [
                 (r"(^|\b){t}: add", True),
@@ -104,7 +104,7 @@ def check_ramp(row):
         (r"spend this mana only to", False),
     ]
 
-    if 'land' not in row['all_types'] and row['mana_rock'] is False and row['mana_dork'] is False:
+    if 'land' not in row['all_types'] and row['meta.mana_rock'] is False and row['meta.mana_dork'] is False:
         return check_any(row['oracle_text'], ramp_checks) and check_all(row['oracle_text'], ramp_negative_checks)
 
     return False
@@ -196,7 +196,7 @@ def check_tutor(row):
         (r"put [^\.,]* into your graveyard", False),
         (r"search your [^\.,]* for a card named", False),
     ]
-    if row['ramp'] is not True and 'land' not in row['all_types']:
+    if row['meta.ramp'] is not True and 'land' not in row['all_types']:
         return check_all(row['oracle_text'], tutor_checks) and check_all(row['oracle_text'], neg_tutor_checks)
     return False
 
@@ -861,7 +861,7 @@ def check_graveyard_tutor(row):
     if 'land' in row['all_types']:
         return False
 
-    if row['ramp'] is True or row['tutor'] is True:
+    if row['meta.ramp'] is True or row['meta.tutor'] is True:
         return False
 
     checks = [
@@ -1062,89 +1062,81 @@ def check_cant_lose(row):
 
 
 check_list = {
-    'counterspell': check_counterspell,
-    'mana_rock': check_mana_rock,
-    'mana_dork': check_mana_dork,
-    'wrath': check_wrath,
-    'ramp': check_ramp,
-    'removal': check_removal,
-    'tutor': check_tutor,
-    'card_draw': check_card_draw,
-    'burn': check_burn,
-    'discard': check_discard,
-
-    'etb': check_etb_trigger,
-    'etb_tapped': check_etb_tapped,
-    'die_trigger': check_die_trigger,
-    'attacks_trigger': check_attacks_trigger,
-    'psudo_ramp': check_psudo_ramp,
-    'static_ramp': check_static_ramp,
-    'creature_tokens': check_creature_tokens,
-    'extra_turn': check_extra_turn,
-
-    'plus1_counters': check_plus1_counters,
-    'minus1_counters': check_minus1_counters,
-    'graveyard_hate': check_graveyard_hate,
-    'free_spell': check_free_spells,
-    'bounce_spell': check_bounce_spell,
-    'sac_outlet': check_sac_outlet,
-    'sac_payoff': check_sac_payoff,
-    'cant_counter': check_cant_counter,
-
-    'cost_x_more': check_cost_x_more,
-    'cost_x_less': check_cost_x_less,
-    'cost_x_more_activate': check_cost_x_more_activate,
-    'cost_x_less_activate': check_cost_x_less_activate,
-    'whenever_opp': check_whenever_opp,
-    'gy_to_hand': check_gy_to_hand,
-    'reanimation': check_reanimation,
-    'cast_from_gy': check_cast_from_gy,
-    'lord': check_lord,
-
-    'upkeep_trigger': check_upkeep_trigger,
-    'end_step_trigger': check_end_step_trigger,
-    'combat_trigger': check_combat_trigger,
-    'life_gain': check_life_gain,
-    'treasure_tokens': check_treasure_tokens,
-    'elusive': check_elusive,
-    'resilient': check_resilient,
-    'cost_reduction': check_cost_reduction,
-
-    'mana_multiplier': check_mana_multipliers,
-    'card_selection': check_card_selection,
-    'when_cast': check_when_cast,
-    'gain_control': check_gain_control,
-    'copy': check_copy,
-    'milling': check_milling,
-    'trigger_multiplier': check_trigger_multiplier,
-    'untapper': check_untapper,
-    'static_effects': check_static_effects,
-    'damage_multipliers': check_damage_multipliers,
-
-    'variable_pt': check_variable_pt,
-    'agressive': check_agressive,
-    'doublers': check_doublers,
-    'blinker': check_doublers,
-    'graveyard_tutor': check_graveyard_tutor,
-    'play_toplibrary': check_play_toplibrary,
-    'life_lose': check_life_loss,
-    'play_from_graveyard': check_play_from_graveyard,
-
-    'venture': check_venture,
-    'animator': check_animator,
-    'wish': check_wish,
-    'gy_synergies': check_gy_synergies,
-    'looting_similar': check_looting_similar,
-    'cheatinto_play': check_cheatinto_play,
-    'pumped_foreach': check_pumped_foreach,
-
-    'ritual': check_ritual,
-    'no_maximum': check_no_maximum,
-    'wheel': check_wheel,
-    'extra_combat': check_extra_combat,
-    'ghostly_prison': check_ghostly_prison,
-    'land_destruction': check_land_destruction,
-    'win_game': check_win_game,
-    'lose_game': check_lose_game,
-    'cant_lose': check_cant_lose,
+    'meta.counterspell': check_counterspell,
+    'meta.mana_rock': check_mana_rock,
+    'meta.mana_dork': check_mana_dork,
+    'meta.wrath': check_wrath,
+    'meta.ramp': check_ramp,
+    'meta.removal': check_removal,
+    'meta.tutor': check_tutor,
+    'meta.card_draw': check_card_draw,
+    'meta.burn': check_burn,
+    'meta.discard': check_discard,
+    'meta.etb': check_etb_trigger,
+    'meta.etb_tapped': check_etb_tapped,
+    'meta.die_trigger': check_die_trigger,
+    'meta.attacks_trigger': check_attacks_trigger,
+    'meta.psudo_ramp': check_psudo_ramp,
+    'meta.static_ramp': check_static_ramp,
+    'meta.creature_tokens': check_creature_tokens,
+    'meta.extra_turn': check_extra_turn,
+    'meta.plus1_counters': check_plus1_counters,
+    'meta.minus1_counters': check_minus1_counters,
+    'meta.graveyard_hate': check_graveyard_hate,
+    'meta.free_spell': check_free_spells,
+    'meta.bounce_spell': check_bounce_spell,
+    'meta.sac_outlet': check_sac_outlet,
+    'meta.sac_payoff': check_sac_payoff,
+    'meta.cant_counter': check_cant_counter,
+    'meta.cost_x_more': check_cost_x_more,
+    'meta.cost_x_less': check_cost_x_less,
+    'meta.cost_x_more_activate': check_cost_x_more_activate,
+    'meta.cost_x_less_activate': check_cost_x_less_activate,
+    'meta.whenever_opp': check_whenever_opp,
+    'meta.gy_to_hand': check_gy_to_hand,
+    'meta.reanimation': check_reanimation,
+    'meta.cast_from_gy': check_cast_from_gy,
+    'meta.lord': check_lord,
+    'meta.upkeep_trigger': check_upkeep_trigger,
+    'meta.end_step_trigger': check_end_step_trigger,
+    'meta.combat_trigger': check_combat_trigger,
+    'meta.life_gain': check_life_gain,
+    'meta.treasure_tokens': check_treasure_tokens,
+    'meta.elusive': check_elusive,
+    'meta.resilient': check_resilient,
+    'meta.cost_reduction': check_cost_reduction,
+    'meta.mana_multiplier': check_mana_multipliers,
+    'meta.card_selection': check_card_selection,
+    'meta.when_cast': check_when_cast,
+    'meta.gain_control': check_gain_control,
+    'meta.copy': check_copy,
+    'meta.milling': check_milling,
+    'meta.trigger_multiplier': check_trigger_multiplier,
+    'meta.untapper': check_untapper,
+    'meta.static_effects': check_static_effects,
+    'meta.damage_multipliers': check_damage_multipliers,
+    'meta.variable_pt': check_variable_pt,
+    'meta.agressive': check_agressive,
+    'meta.doublers': check_doublers,
+    'meta.blinker': check_doublers,
+    'meta.graveyard_tutor': check_graveyard_tutor,
+    'meta.play_toplibrary': check_play_toplibrary,
+    'meta.life_lose': check_life_loss,
+    'meta.play_from_graveyard': check_play_from_graveyard,
+    'meta.venture': check_venture,
+    'meta.animator': check_animator,
+    'meta.wish': check_wish,
+    'meta.gy_synergies': check_gy_synergies,
+    'meta.looting_similar': check_looting_similar,
+    'meta.cheatinto_play': check_cheatinto_play,
+    'meta.pumped_foreach': check_pumped_foreach,
+    'meta.ritual': check_ritual,
+    'meta.no_maximum': check_no_maximum,
+    'meta.wheel': check_wheel,
+    'meta.extra_combat': check_extra_combat,
+    'meta.ghostly_prison': check_ghostly_prison,
+    'meta.land_destruction': check_land_destruction,
+    'meta.win_game': check_win_game,
+    'meta.lose_game': check_lose_game,
+    'meta.cant_lose': check_cant_lose,
 }

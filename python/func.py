@@ -7,9 +7,129 @@ import numpy as np
 from pandas import DataFrame
 import python.checks as checks
 
+card_types = [
+    # Types
+    'subtypes',
+    'supertypes',
+    'types',
+
+    # DFC Types
+    'face_type',
+    'face_subtype',
+    'back_type',
+    'back_subtype',
+]
+
+array_columns = [
+    'games',
+
+    # Types
+    'subtypes',
+    'supertypes',
+    'types',
+
+    # DFC Types
+    'face_type',
+    'face_subtype',
+    'back_type',
+    'back_subtype',
+
+    # Physical
+    'finishes',
+    'frame_effects',
+    'promo_types',
+
+    # Colors
+    'colors',
+    'color_identity',
+
+    # Abilities
+    'keywords',
+    'produced_mana',
+]
+
+def process_data(json_data):
+    set_df = pd.json_normalize(json_data)
+
+    # Exclude Unsets
+    unsets = ['ugl', 'unh', 'ust', 'und', 'unf']
+    set_df = set_df[~set_df['set_code'].isin(unsets)]
+
+    # Drop columns that contain 'uri'
+    drop_columns(set_df, set_df.filter(regex='uri').columns)
+    # Drop columns that end with '_id'
+    drop_columns(set_df, set_df.filter(regex='_id$').columns)
+    # Drop other columns
+    drop_columns(set_df, ['multiverse_ids'])
+
+    # Fill empty columns
+    fill_empty_columns(set_df)
+
+    set_df['dfc'] = set_df['card_faces'].apply(lambda x: len(x) > 0)
+
+    # Parse double faced cards
+    set_df = dfc(set_df)
+
+    clean_keywords(set_df)
+    clean_oracle_text(set_df)
+    check_array_columns(array_columns, set_df)
+    mana_colors(set_df)
+    card_meta(set_df)
+    release_dates(set_df)
+    price_buckets(set_df)
+    multiclass(set_df)
+
+    # Tokenize Oracle Text
+    set_df['oracle_tokens'] = set_df['oracle_text'].apply(
+        lambda x: process_oracle(x))
+
+    set_df = process_types(set_df)
+    set_df = meta_types(set_df)
+
+    # Keyword total
+    set_df['keyword_count'] = set_df['keywords'].apply(lambda x: len(x))
+    # Total keywords and meta types
+    set_df['total_abilities'] = set_df['keyword_count'] + \
+                                set_df['meta_type_count']
+
+    print_stats(set_df)
+
+    # Flatten arrays
+    print("Flattening Arrays")
+    for column in array_columns:
+        set_df = flatten_array(set_df, column, drop=True)
+
+    # filter out basic lands
+    set_df = set_df[set_df['supertypes.basic'] != 1]
+
+    # Flatten oracle tokens and clean them
+    set_df = flatten_array(set_df, 'oracle_tokens', prefix='tkn')
+    clean_tokens(set_df)
+    clean_types(set_df)
+
+    print_stats(set_df)
+
+    # float_to_int(set_df)
+    check_bool(set_df)
+    set_df = encode_columns(set_df, [
+        'power', 'toughness', 'loyalty',
+        # 'cmc_grp',
+        # 'border_color', 'layout', 'frame',
+    ])
+    bool_to_int(set_df)
+
+    set_df = encode_columns(
+        set_df, df_columns(set_df, r"^legalities\."))
+    set_df = encode_face_columns(set_df, [
+        'power', 'toughness', 'loyalty',
+    ])
+
+    print(f"Final shape of dataframe: {set_df.shape}")
+    return set_df
+
 
 def flatten_array(data: DataFrame, key: str, prefix=None, drop=False):
-    print(f'Flattening {key}...')
+    print(f'  - Flattening {key}...')
 
     # "Explode" the lists into separate rows
     df_exploded = data[['name', key]].explode(key)
@@ -207,11 +327,11 @@ def mana_colors(data):
     data['mana_symbols_cost'] = data['mana_cost'].str.count('W|U|B|R|G').fillna(0)
 
     # We also count how many specific mana symbols
-    data['devotion_W'] = data['mana_cost'].str.count('W').fillna(0)
-    data['devotion_U'] = data['mana_cost'].str.count('U').fillna(0)
-    data['devotion_B'] = data['mana_cost'].str.count('B').fillna(0)
-    data['devotion_R'] = data['mana_cost'].str.count('R').fillna(0)
-    data['devotion_G'] = data['mana_cost'].str.count('G').fillna(0)
+    data['devotion.W'] = data['mana_cost'].str.count('W').fillna(0)
+    data['devotion.U'] = data['mana_cost'].str.count('U').fillna(0)
+    data['devotion.B'] = data['mana_cost'].str.count('B').fillna(0)
+    data['devotion.R'] = data['mana_cost'].str.count('R').fillna(0)
+    data['devotion.G'] = data['mana_cost'].str.count('G').fillna(0)
 
     # Create a column that is 1 if it's a card with X in its mana cost
     data['X_spell'] = np.where(data['mana_cost'].str.contains('{X}'), 1, 0)
@@ -235,10 +355,10 @@ def mana_colors(data):
 def card_meta(data):
     # Includes tapping ability
     # We create a column that is 1 if the card has {T} in the oracle_text
-    data['tapping_ability'] = np.where(data['oracle_text'].str.contains('{T}'), 1, 0)
+    data['meta.tapping_ability'] = np.where(data['oracle_text'].str.contains('{T}'), 1, 0)
     # Includes multiple choice
     # We create a column that is 1 if the card has '• ' in the oracle_text
-    data['multiple_choice'] = np.where(data['oracle_text'].str.contains('• '), 1, 0)
+    data['meta.multiple_choice'] = np.where(data['oracle_text'].str.contains('• '), 1, 0)
 
 
 # Define a function that takes the oracle text, removes undesired characters, stopwords and tokenizes it
@@ -278,7 +398,7 @@ def process_oracle(oracle):
     # Remove tokens that are just numbers, symbols or artifacts
     remove_tokens = ['iii', 'None', '•', 'x', 'c', 'r', '−', 'g', 'iv', '}:',
                      'eight', 'nine', 'ten', '—', 'ii', 'u', 'b', 'w', 'p',
-                     '.', '..', '...', '. . .', '___']
+                     '.', '..', '...', '. . .', '___', ']:']
     oracle_clean = [word for word in oracle_clean if word not in remove_tokens]
 
     return oracle_clean
@@ -292,41 +412,31 @@ def process_types(data: DataFrame):
       Output:
           data: a DataFrame containing the data with the types merged
       """
-    type_cols = [
-        # Types
-        'subtypes',
-        'supertypes',
-        'types',
-        # DFC Types
-        'face_type',
-        'face_subtype',
-        'back_type',
-        'back_subtype',
-    ]
+
     # create a subset of the data with only the columns we need
-    data_types = data[['name'] + type_cols].dropna()
+    data_types = data[['name'] + card_types].dropna()
 
     # Create a column that is a list of all the types
-    data_types['all_types'] = data_types[type_cols].values.tolist()
+    data_types['all_types'] = data_types[card_types].values.tolist()
     # flatten the list
     data_types['all_types'] = data_types['all_types'].apply(lambda x: [item for sublist in x for item in sublist])
     # remove duplicates
     data_types['all_types'] = data_types['all_types'].apply(lambda x: list(set(x)))
 
-    drop_columns(data_types, type_cols)
+    drop_columns(data_types, card_types)
     data = data.merge(data_types, on='name', how='left')
 
     return data
 
 
 def meta_types(data: DataFrame):
-    set_df_kw = data[['name', 'oracle_text', 'all_types', 'tapping_ability', 'keywords',
+    set_df_kw = data[['name', 'oracle_text', 'all_types', 'meta.tapping_ability', 'keywords',
                       'power', 'toughness']].dropna()
 
     for k in checks.check_list.keys():
         set_df_kw[k] = set_df_kw.apply(checks.check_list[k], axis=1)
 
-    drop_columns(set_df_kw, ['oracle_text', 'all_types', 'tapping_ability',
+    drop_columns(set_df_kw, ['oracle_text', 'all_types', 'meta.tapping_ability',
                              'keywords', 'power', 'toughness'])
 
     # Create a column that sums them for each card
@@ -394,9 +504,14 @@ def release_dates(data: DataFrame):
     data['month'] = pd.DatetimeIndex(data['released_at']).month.astype('str')
 
 
+def clean_keywords(data: DataFrame):
+    # replace special characters in keywords array with _
+    data['keywords'] = data['keywords'].apply(lambda x: [re.sub('[^A-Za-z0-9]+', '_', i) for i in x])
+
+
 def clean_tokens(data: DataFrame):
     # Create a df to count occurrence of each type column and filter out any that has lower than 0 occurrences
-
+    print(f"Clean Tokens")
     # Get a list of all the type columns
     tkn_col_list = []
 
@@ -405,7 +520,7 @@ def clean_tokens(data: DataFrame):
             if element.startswith("tkn."):
                 tkn_col_list.append(element)
 
-    print(f"Token Columns Length: {len(tkn_col_list)}")
+    print(f"  Token Columns Length: {len(tkn_col_list)}")
 
     # Create a df to count occurrence of each token column and filter out any that has lower than 3 occurrences
     count_tkn_df = pd.DataFrame(data[tkn_col_list].sum().sort_values(ascending=False))
@@ -421,35 +536,23 @@ def clean_tokens(data: DataFrame):
     # Use the list to get another list of the columns we will want to REMOVE
     tkn_cols_to_drop = list(set(tkn_col_list) - set(tkn_cols_to_keep))
 
-    print(f"Number of token columns to remove: {len(tkn_cols_to_drop)}")
+    print(f"  Number of token columns to remove: {len(tkn_cols_to_drop)}")
     return drop_columns(data, tkn_cols_to_drop)
 
 
 def clean_types(data: DataFrame):
-    # Delete type columns that do not have a relevant volume
-    types = [
-        # Types
-        'subtypes',
-        'supertypes',
-        'types',
-
-        # DFC Types
-        'face_type',
-        'face_subtype',
-        'back_type',
-        'back_subtype',
-    ]
-
+    print(f"Clean Types")
     # Get a list of all the type columns
     type_col_list = []
 
     for e in list(data.columns):
-        for t in types:
+        for t in card_types:
             for element in e.split():
                 if element.startswith(f"{t}."):
+                    # print(element)
                     type_col_list.append(element)
 
-    print(f"Type Columns Length: {len(type_col_list)}")
+    print(f"  Type Columns Length: {len(type_col_list)}")
 
     # Create a df to count occurrence of each type column and filter out any that has lower than 0 occurrences
     count_type_df = pd.DataFrame(data[type_col_list].sum().sort_values(ascending=False))
@@ -465,8 +568,10 @@ def clean_types(data: DataFrame):
     # Use the list to get another list of the columns we will want to REMOVE
     type_cols_to_drop = list(set(type_col_list) - set(type_cols_to_keep))
 
-    print(f"Number of token columns to remove: {len(type_cols_to_drop)}")
-    return drop_columns(data, type_col_list)
+    print(f"  Number of type columns to remove: {len(type_cols_to_drop)}")
+    if len(type_cols_to_drop) > 0:
+        drop_columns(data, type_col_list)
+    return data
 
 
 def float_to_int(data: DataFrame):
@@ -479,6 +584,18 @@ def float_to_int(data: DataFrame):
         data[float_cols]
     )
     data[float_cols] = data[float_cols].astype(int)
+
+
+def bool_to_int(data: DataFrame):
+    # Convert bool columns to int
+    bool_cols = data.select_dtypes(include=[bool]).columns
+    print(f"Number of bool columns: {len(bool_cols)}")
+    data[bool_cols] = np.where(
+        data[bool_cols].isna(),
+        False,
+        data[bool_cols]
+    )
+    data[bool_cols] = data[bool_cols].astype(int)
 
 
 # Set missing values to False
@@ -531,12 +648,36 @@ def df_columns(data: DataFrame, regex):
         for element in e.split():
             if re.match(regex, element):
                 col_list.append(element)
-    return col_list
+    return list(col_list)
 
 
 def multiclass(data: DataFrame):
-    data['multiclass_colrs'] = data['colors']
-    data['multiclass_rarty'] = data['rarity']
-    data['multiclass_binusd'] = data['binusd']
-    data['multiclass_bineur'] = data['bineur']
-    data['multiclass_bintix'] = data['bintix']
+    data['multiclass.colrs'] = data['colors'].apply(lambda x: ''.join(x))
+    # set multiclass.colrs to C if colorless is true
+    data['multiclass.colrs'] = np.where(
+        data['colorless'] is True,
+        'C',
+        data['multiclass.colrs']
+    )
+
+    data['multiclass.rarty'] = data['rarity']
+    data['multiclass.binusd'] = data['binusd']
+    data['multiclass.bineur'] = data['bineur']
+    data['multiclass.bintix'] = data['bintix']
+
+
+def print_total_type_cols(data: DataFrame):
+    count = 0
+    for e in list(data.columns):
+        for t in card_types:
+            for element in e.split():
+                if element.startswith(f"{t}."):
+                    count += 1
+    print(f"Total type columns: {count}")
+
+
+def print_stats(data: DataFrame):
+    print("--------------------")
+    print(f"Shape of dataframe: {data.shape}")
+    print_total_type_cols(data)
+    print("--------------------")
